@@ -8,8 +8,8 @@ if [ -z $1 ]; then
 fi
 
 VERSION=$1
-COMPANY="heartexlabs"
-REPO="label-studio"
+COMPANY="pareto-engineering"
+REPO="label-studio-frontend"
 
 # Colors for colored output
 GREEN='\033[0;32m'

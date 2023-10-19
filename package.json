@@ -1,11 +1,11 @@
 {
-  "name": "@heartexlabs/label-studio",
+  "name": "@pareto-engineering/label-studio-frontend",
   "version": "1.4.0",
   "description": "Data Labeling Tool that is backend agnostic and can be embedded into your applications",
   "homepage": "https://labelstud.io",
   "author": {
-    "name": "Heartex Labs",
-    "url": "https://github.com/heartexlabs"
+    "name": "Pareto Engineering",
+    "url": "https://github.com/HelloPareto/label-studio-frontend"
   },
   "license": "Apache-2.0",
   "repository": {
