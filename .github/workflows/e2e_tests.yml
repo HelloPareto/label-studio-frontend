@@ -19,7 +19,7 @@ jobs:
     # ci can be skipped with `[skip ci]` prefix in message
     if: "!contains(github.event.head_commit.message, 'skip ci')"
     steps:
-      - uses: hmarr/debug-action@v2.1.0
+      - uses: hmarr/debug-action@v3.0.0
 
       - name: "Checkout codebase"
         uses: actions/checkout@v4
@@ -27,7 +27,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           ref: ${{ inputs.sha }}
 
-      - uses: actions/setup-node@v3
+      - uses: actions/setup-node@v4
         with:
           node-version: "${{ env.NODE }}"
 
@@ -43,7 +43,7 @@ jobs:
         run: echo "dir=$(yarn cache dir)" >> $GITHUB_OUTPUT
 
       - name: Configure yarn cache
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ${{ steps.yarn-cache-dir-path.outputs.dir }}
           key: ${{ env.CACHE_NAME_PREFIX }}-${{ runner.os }}-node-${{ env.NODE }}-${{ hashFiles('**/yarn.lock') }}
@@ -94,7 +94,7 @@ jobs:
         run: |
           set -euo pipefail
           cd e2e
-          yarn run test:ci ${{ steps.cpu-info.outputs.cores-count }} --debug --verbose
+          yarn run test:ci ${{ steps.cpu-info.outputs.cores-count }}
 
       - name: "Upload e2e output" 
         uses: ./.github/actions/upload-artifact

@@ -157,7 +157,7 @@ const createAddEventListenerScript = (eventName, callback) => {
  * Wait for the main Image object to be loaded
  */
 const waitForImage = () => {
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
     const img = document.querySelector('[alt=LS]');
 
     if (!img || img.complete) return resolve();
@@ -165,6 +165,8 @@ const waitForImage = () => {
     img.onload = () => {
       setTimeout(resolve, 100);
     };
+    // if image is not loaded in 10 seconds, reject
+    setTimeout(reject, 10000);
   });
 };
 
@@ -532,11 +534,11 @@ async function generateImageUrl({ width, height }) {
 }
 
 const getCanvasSize = () => {
-  const stage = window.Konva.stages[0];
+  const imageObject = window.Htx.annotationStore.selected.objects.find(o => o.type === 'image');
 
   return {
-    width: stage.width(),
-    height: stage.height(),
+    width: imageObject.canvasSize.width,
+    height: imageObject.canvasSize.height,
   };
 };
 const getImageSize = () => {

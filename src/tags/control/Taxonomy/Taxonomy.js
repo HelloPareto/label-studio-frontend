@@ -21,8 +21,8 @@ import { SharedStoreMixin } from '../../../mixins/SharedChoiceStore/mixin';
 import VisibilityMixin from '../../../mixins/Visibility';
 import { parseValue } from '../../../utils/data';
 import {
-  FF_DEV_2007_DEV_2008,
   FF_DEV_3617,
+  FF_LEAP_218,
   FF_LSDV_4583,
   FF_TAXONOMY_ASYNC,
   FF_TAXONOMY_LABELING,
@@ -50,10 +50,11 @@ import { errorBuilder } from '../../../core/DataValidator/ConfigValidator';
 /**
  * The `Taxonomy` tag is used to create one or more hierarchical classifications, storing both choice selections and their ancestors in the results. Use for nested classification tasks with the `Choice` tag.
  *
+ * You can define nested classifications using the `Choice` tag, or retrieve external classifications using the `apiUrl` parameter. For more information on these options, see the [Taxonomy template page](/templates/taxonomy).
+ *
  * Use with the following data types: audio, image, HTML, paragraphs, text, time series, video.
  *
  * [^FF_LSDV_4583]: `fflag_feat_front_lsdv_4583_multi_image_segmentation_short` should be enabled for `perItem` functionality
- * [^FF_TAXONOMY_ASYNC]: `fflag_feat_front_lsdv_5451_async_taxonomy_110823_short` should be enabled to load items from `apiUrl` asynchronously
  *
  * @example
  * <!--Labeling configuration for providing a taxonomy of choices in response to a passage of text -->
@@ -76,11 +77,11 @@ import { errorBuilder } from '../../../core/DataValidator/ConfigValidator';
  * @meta_description Customize Label Studio with the Taxonomy tag and use hierarchical labels for machine learning and data science projects.
  * @param {string} name                   - Name of the element
  * @param {string} toName                 - Name of the element that you want to classify
- * @param {string} [apiUrl]               - URL to fetch taxonomy from remote source; API should accept optional array `path` param: `apiUrl?path[]=root&path[]=child1` to return only nested children of `child1` node[^FF_TAXONOMY_ASYNC]
+ * @param {string} [apiUrl]               - **Beta** -- Retrieve the taxonomy from a remote source. This can be a JSON-formatted file or a hierarchical data source read as an API. For more information, see the [Taxonomy template page](/templates/taxonomy)
  * @param {boolean} [leafsOnly=false]     - Allow annotators to select only leaf nodes of taxonomy
  * @param {boolean} [showFullPath=false]  - Whether to show the full path of selected items
- * @param {string} [pathSeparator= / ]    - Separator to show in the full path (default is " / ")
- * @param {number} [maxUsages]            - Maximum number of times a choice can be selected per task
+ * @param {string} [pathSeparator= / ]    - Separator to show in the full path (default is " / "). To avoid errors, ensure that your data does not include this separator
+ * @param {number} [maxUsages]            - Maximum number of times a choice can be selected per task or per region
  * @param {number} [maxWidth]             - Maximum width for dropdown
  * @param {number} [minWidth]             - Minimum width for dropdown
  * @param {boolean} [required=false]      - Whether taxonomy validation is required
@@ -88,6 +89,7 @@ import { errorBuilder } from '../../../core/DataValidator/ConfigValidator';
  * @param {string} [placeholder=]         - What to display as prompt on the input
  * @param {boolean} [perRegion]           - Use this tag to classify specific regions instead of the whole object
  * @param {boolean} [perItem]             - Use this tag to classify specific items inside the object instead of the whole object[^FF_LSDV_4583]
+ * @param {boolean} [legacy]              - Use this tag to enable the legacy version of the Taxonomy tag. When true, the `apiUrl` parameter is not usable. 
  */
 const TagAttrs = types.model({
   toname: types.maybeNull(types.string),
@@ -102,7 +104,7 @@ const TagAttrs = types.model({
   maxwidth: types.maybeNull(types.string),
   dropdownwidth: types.maybeNull(types.string),
   maxusages: types.maybeNull(types.string),
-  ...(isFF(FF_DEV_2007_DEV_2008) ? { value: types.optional(types.string, '') } : {}),
+  value: types.optional(types.string, ''),
 });
 
 function traverse(root) {
@@ -135,7 +137,7 @@ function traverse(root) {
   };
 
   if (!root) return [];
-  if (isFF(FF_DEV_2007_DEV_2008) && !Array.isArray(root)) return visitUnique([root]);
+  if (!Array.isArray(root)) return visitUnique([root]);
   return visitUnique(root);
 }
 
@@ -549,6 +551,8 @@ const Model = types
         if (!self.isLoadedByApi) return Super.updateValue?.(store);
 
         self._api = parseValue(self.apiurl, store.task.dataObj);
+        // trying to presign this url if needed and if handler is passed into LSF
+        self._api = (yield store.presignUrlForProject(self._api)) ?? self._api;
 
         yield self.loadItems();
       }),
@@ -573,7 +577,7 @@ const TaxonomyModel = types.compose('TaxonomyModel',
   ControlBase,
   ClassificationBase,
   TagAttrs,
-  ...(isFF(FF_DEV_2007_DEV_2008) ? [DynamicChildrenMixin] : []),
+  DynamicChildrenMixin,
   AnnotationMixin,
   RequiredMixin,
   Model,
@@ -587,6 +591,12 @@ const TaxonomyModel = types.compose('TaxonomyModel',
 );
 
 const HtxTaxonomy = observer(({ item }) => {
+  // literal "taxonomy" class name is for external styling
+  const className = [
+    styles.taxonomy,
+    'taxonomy',
+    isFF(FF_TAXONOMY_ASYNC) ? styles.taxonomy__new : '',
+  ].filter(Boolean).join(' ');
   const visibleStyle = item.perRegionVisible() && item.isVisible ? {} : { display: 'none' };
   const options = {
     showFullPath: item.showfullpath,
@@ -600,9 +610,23 @@ const HtxTaxonomy = observer(({ item }) => {
     canRemoveItems: item.canRemoveItems,
   };
 
+  // without full api there will be just one initial loading;
+  // with full api we should not block UI with spinner on nested requests —
+  // they are indicated by loading icon on the item itself
+  const firstLoad = item.isLoadedByApi ? !item.items.length : true;
+
+  if (item.loading && isFF(FF_DEV_3617) && firstLoad) {
+    return (
+      <div className={className} style={visibleStyle}>
+        <div className={styles.taxonomy__loading}>
+          <Spin size="small"/>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    // @todo use BEM class names + literal "taxonomy" for external styling
-    <div className={[styles.taxonomy, 'taxonomy'].join(' ')} style={{ ...visibleStyle }}>
+    <div className={className} style={visibleStyle}>
       {(isFF(FF_TAXONOMY_ASYNC) && !item.legacy) ? (
         <NewTaxonomy
           items={item.items}
@@ -612,24 +636,19 @@ const HtxTaxonomy = observer(({ item }) => {
           onAddLabel={item.userLabels && item.onAddLabel}
           onDeleteLabel={item.userLabels && item.onDeleteLabel}
           options={options}
+          defaultSearch={!isFF(FF_LEAP_218)}
           isEditable={!item.isReadOnly()}
         />
       ) : (
-        item.loading && isFF(FF_DEV_3617) ? (
-          <div className={styles.taxonomy__loading}>
-            <Spin size="small"/>
-          </div>
-        ) : (
-          <Taxonomy
-            items={item.items}
-            selected={item.selected}
-            onChange={item.onChange}
-            onAddLabel={item.userLabels && item.onAddLabel}
-            onDeleteLabel={item.userLabels && item.onDeleteLabel}
-            options={options}
-            isEditable={!item.isReadOnly()}
-          />
-        )
+        <Taxonomy
+          items={item.items}
+          selected={item.selected}
+          onChange={item.onChange}
+          onAddLabel={item.userLabels && item.onAddLabel}
+          onDeleteLabel={item.userLabels && item.onDeleteLabel}
+          options={options}
+          isEditable={!item.isReadOnly()}
+        />
       )}
     </div>
   );

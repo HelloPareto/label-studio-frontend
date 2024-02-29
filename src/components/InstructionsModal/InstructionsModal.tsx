@@ -1,5 +1,6 @@
 import React from 'react';
 import { Modal } from 'antd';
+import { sanitizeHtml } from '../../utils/html';
 
 export const InstructionsModal = ({
   title,
@@ -7,10 +8,10 @@ export const InstructionsModal = ({
   visible,
   onCancel,
 }: {
-  title: string,
-  children: React.ReactNode,
-  visible: boolean,
-  onCancel: () => void,
+  title: string;
+  children: React.ReactNode;
+  visible: boolean;
+  onCancel: () => void;
 }) => {
   const contentStyle: Record<string, string> = { padding: '0 24px 24px', whiteSpace: 'pre-wrap' };
 
@@ -18,7 +19,7 @@ export const InstructionsModal = ({
     <>
       <Modal
         title=""
-        visible={visible}
+        open={visible}
         maskClosable
         footer={null}
         closable={true}
@@ -48,10 +49,7 @@ export const InstructionsModal = ({
           {title}
         </h2>
         {typeof children === 'string' ? (
-          <p
-            style={contentStyle}
-            dangerouslySetInnerHTML={{ __html: children }}
-          />
+          <p style={contentStyle} dangerouslySetInnerHTML={{ __html: sanitizeHtml(children) }} />
         ) : (
           <p style={contentStyle}>{children}</p>
         )}
