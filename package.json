@@ -46,7 +46,8 @@
     "test:coverage": "yarn test -- --coverage",
     "test:watch": "react-scripts test",
     "test": "yarn jest src",
-    "coverage:merge": "npx nyc merge coverage/ coverage/coverage.json && rm -f coverage/*.coverage.json"
+    "coverage:merge": "npx nyc merge coverage/ coverage/coverage.json && rm -f coverage/*.coverage.json",
+    "publish": "sh scripts/publish.sh $(grep TOKEN .env | cut -d '=' -f 2)"
   },
   "husky": {
     "hooks": {
