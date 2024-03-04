@@ -27,8 +27,8 @@ rm build/.gitignore
 # Replace links to published files in README to the actual one
 # `ls -tU` sorts files by creation date (recent is first)
 # `head -1` gets the first one (the recent)
-sed -E -e "s/main\..*js/$(cd build/static/js && ls -tU *.js | head -1)/"\
-       -e "s/main\..*css/$(cd build/static/css && ls -tU *.css | head -1)/"\
+sed -E -e "s/LabelStudio\..*js/$(cd build/static/js && ls -tU *.js | head -1)/"\
+       -e "s/LabelStudio\..*css/$(cd build/static/css && ls -tU *.css | head -1)/"\
        -e "s/[0-9]\.[0-9]+\.[0-9]+/$VERSION/"\
        -i '' README.md
 git add README.md

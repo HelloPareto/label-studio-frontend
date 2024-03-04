@@ -277,18 +277,19 @@ if (BUILD.DIAGNOSTICS) {
 const sourceMap = isDevelopment ? "cheap-module-source-map" : "source-map";
 
 module.exports = ({ withDevServer = true } = {}) => ({
+  name: "LabelStudio",
   mode: DEFAULT_NODE_ENV || "development",
   target: process.env.NODE_ENV === "development" ? "web" : "browserslist",
   devtool: sourceMap,
   ...(withDevServer ? devServer() : {}),
   entry: {
-    main: [
+    LabelStudio: [
       path.resolve(__dirname, "src/index.js"),
     ],
   },
   output: {
     path: path.resolve(workingDirectory),
-    filename: "main.js",
+    filename: "LabelStudio.js",
     ...output(),
   },
   resolve: {
