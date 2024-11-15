@@ -226,11 +226,22 @@ const LabelOnPolygon = observer(({ item, color }) => {
   if (!bbox) return null;
 
   const settings = getRoot(item).settings;
+  const [rectRef, setRectRef] = useState(null);
+
+  // Cleanup Rect element on unmount
+  useEffect(() => {
+    return () => {
+      if (rectRef) {
+        rectRef.destroy();
+      }
+    };
+  }, [rectRef]);
 
   return (
     <Fragment>
       {settings && (settings.showLabels || settings.showScore) && (
         <Rect
+          ref={setRectRef}
           x={bbox.left}
           y={bbox.top}
           fillEnabled={false}
@@ -272,9 +283,26 @@ const LabelOnMask = observer(({ item, color }) => {
   const bbox = item.bboxCoordsCanvas;
 
   if (!bbox) return null;
+
+  const [groupRef, setGroupRef] = useState(null);
+  const [rectRef, setRectRef] = useState(null);
+
+  // Cleanup Group and Rect elements on unmount
+  useEffect(() => {
+    return () => {
+      if (rectRef) {
+        rectRef.destroy();
+      }
+      if (groupRef) {
+        groupRef.destroy();
+      }
+    };
+  }, [rectRef, groupRef]);
+
   return (
-    <Group name="region-label">
+    <Group ref={setGroupRef} name="region-label">
       <Rect
+        ref={setRectRef}
         x={bbox.left}
         y={bbox.top}
         fillEnabled={false}
