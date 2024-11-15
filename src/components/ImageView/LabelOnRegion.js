@@ -1,4 +1,4 @@
-import React, { Fragment, useCallback, useContext, useMemo, useState } from 'react';
+import React, { Fragment, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { Group, Label, Path, Rect, Tag, Text } from 'react-konva';
 import { observer } from 'mobx-react';
 import { getRoot } from 'mobx-state-tree';
@@ -42,6 +42,15 @@ const LabelOnBbox = ({
   const isSticking = !!textMaxWidth;
   const { suggestion } = useContext(ImageViewContext) ?? {};
 
+  // Cleanup textEl on unmount
+  useEffect(() => {
+    return () => {
+      if (textEl) {
+        textEl.destroy();
+      }
+    };
+  }, [textEl]);
+
   const width = useMemo(() => {
     if (!showLabels || !textEl || !maxWidth) return null;
     const currentTextWidth = (text ? textEl.measureSize(text).width : 0);
@@ -51,7 +60,7 @@ const LabelOnBbox = ({
     } else {
       return null;
     }
-  }, [textEl, text, maxWidth, scale]);
+  }, [textEl, text, maxWidth, scale, showLabels, textMaxWidth]);
 
   const tagSceneFunc = useCallback((context, shape) => {
     const cornerRadius = adjacent && isSticking ? ADJACENT_CORNER_RADIUS : NON_ADJACENT_CORNER_RADIUS;
@@ -89,12 +98,24 @@ const LabelOnBbox = ({
     }
     context.closePath();
     context.fillStrokeShape(shape);
-  }, [adjacent, isSticking, maxWidth]);
+  }, [adjacent, isSticking, maxWidth, zoomScale, horizontalPaddings]);
+
+  // Memoize event handlers to prevent unnecessary re-renders
+  const handleClickLabel = useCallback(() => {
+    if (onClickLabel) onClickLabel();
+  }, [onClickLabel]);
+
+  const handleMouseEnter = useCallback(() => {
+    if (onMouseEnterLabel) onMouseEnterLabel();
+  }, [onMouseEnterLabel]);
+
+  const handleMouseLeave = useCallback(() => {
+    if (onMouseLeaveLabel) onMouseLeaveLabel();
+  }, [onMouseLeaveLabel]);
 
   return (
     <Group strokeScaleEnabled={false} x={x} y={y} rotation={rotation}>
       {ss && (
-
         <Label y={-height * scale} scaleX={scale} scaleY={scale} onClick={() => { return false; }}>
           <Tag fill={Utils.Colors.getScaleGradient(score)} cornerRadius={2} />
           <Text
@@ -110,9 +131,9 @@ const LabelOnBbox = ({
       {showLabels && (
         <>
           <Label x={paddingLeft * scale + scoreSpace * scale} y={-height * scale} scaleX={scale} scaleY={scale}
-            onClick={onClickLabel}
-            onMouseEnter={onClickLabel ? onMouseEnterLabel : null}
-            onMouseLeave={onClickLabel ? onMouseLeaveLabel : null}
+            onClick={handleClickLabel}
+            onMouseEnter={handleMouseEnter}
+            onMouseLeave={handleMouseLeave}
             listening={!suggestion}
           >
             <Tag fill={color} cornerRadius={4} sceneFunc={tagSceneFunc} offsetX={paddingLeft} />
