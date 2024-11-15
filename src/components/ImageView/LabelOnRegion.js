@@ -331,50 +331,95 @@ const LabelOnMask = observer(({ item, color }) => {
 
 const LabelOnKP = observer(({ item, color }) => {
   const isLabeling = !!item.labeling;
-  const isTexting = !!item.texting;
   const labelText = item.getLabelText(',');
 
-  if (!isLabeling && !isTexting) return null;
+  if (!isLabeling) return null;
+
+  const bbox = item.bboxCoordsCanvas;
+
+  if (!bbox) return null;
+
+  const settings = getRoot(item).settings;
+  const [groupRef, setGroupRef] = useState(null);
+
+  // Cleanup Group element on unmount
+  useEffect(() => {
+    return () => {
+      if (groupRef) {
+        groupRef.destroy();
+      }
+    };
+  }, [groupRef]);
 
   return (
-    <LabelOnBbox
-      // keypoints' width scaled back to stay always small, so scale it here too
-      x={item.canvasX + (item.canvasWidth + 2) / item.parent.zoomScale}
-      y={item.canvasY + (item.canvasWidth + 2) / item.parent.zoomScale}
-      isTexting={isTexting}
-      text={labelText}
-      score={item.score}
-      showLabels={getRoot(item).settings.showLabels}
-      showScore={getRoot(item).settings.showScore}
-      zoomScale={item.parent.zoomScale}
-      color={color}
-      onClickLabel={item.onClickLabel}
-    />
+    <Group ref={setGroupRef}>
+      <LabelOnBbox
+        x={bbox.left}
+        y={bbox.top + 2 / item.parent.zoomScale}
+        text={labelText}
+        score={item.score}
+        showLabels={settings && settings.showLabels}
+        showScore={settings && settings.showScore}
+        zoomScale={item.parent.zoomScale}
+        color={color}
+        onClickLabel={item.onClickLabel}
+      />
+    </Group>
   );
 });
 
-const LabelOnVideoBbox = observer(({ reg, box, color, scale, strokeWidth, adjacent = false }) => {
-  const isLabeling = !!reg.labeling;
-  const isTexting = !!reg.texting;
-  const labelText = reg.getLabelText(',');
+const LabelOnVideoBbox = observer(({ item, color }) => {
+  const isLabeling = !!item.labeling;
+  const labelText = item.getLabelText(',');
 
-  if (!isLabeling && !isTexting) return null;
+  if (!isLabeling) return null;
+
+  const bbox = item.bboxCoordsCanvas;
+
+  if (!bbox) return null;
+
+  const settings = getRoot(item).settings;
+  const [groupRef, setGroupRef] = useState(null);
+  const [rectRef, setRectRef] = useState(null);
+
+  // Cleanup Group and Rect elements on unmount
+  useEffect(() => {
+    return () => {
+      if (rectRef) {
+        rectRef.destroy();
+      }
+      if (groupRef) {
+        groupRef.destroy();
+      }
+    };
+  }, [rectRef, groupRef]);
 
   return (
-    <LabelOnBbox
-      x={box.x}
-      y={box.y}
-      rotation={box.rotation}
-      isTexting={isTexting}
-      text={labelText}
-      score={reg.score}
-      showLabels={reg.store.settings.showLabels}
-      zoomScale={scale}
-      color={color}
-      maxWidth={box.width + strokeWidth}
-      adjacent={adjacent}
-      onClickLabel={reg.onClickRegion}
-    />
+    <Group ref={setGroupRef}>
+      <Rect
+        ref={setRectRef}
+        x={bbox.left}
+        y={bbox.top}
+        fillEnabled={false}
+        width={bbox.right - bbox.left}
+        height={bbox.bottom - bbox.top}
+        stroke={item.style?.strokecolor}
+        strokeWidth={1}
+        strokeScaleEnabled={false}
+        shadowBlur={0}
+      />
+      <LabelOnBbox
+        x={bbox.left}
+        y={bbox.top + 2 / item.parent.zoomScale}
+        text={labelText}
+        score={item.score}
+        showLabels={settings && settings.showLabels}
+        showScore={settings && settings.showScore}
+        zoomScale={item.parent.zoomScale}
+        color={color}
+        onClickLabel={item.onClickLabel}
+      />
+    </Group>
   );
 });
 
